@@ -1,6 +1,6 @@
 /**
  * THIS ENTIRE FILE IS COPIED FROM CSSO (MIT LICENSE):
- * https://github.com/css/csso/blob/e33bd07b4d7e76b76e695c5c8d74cda2b68c9b28/lib/restructure/prepare/specificity.js
+ * https://github.com/css/csso/blob/e33bd07b4d7e76b76e695c5c8d74cda2b68c9b28/test/fixture/specificity.js
  */
 
 import { test } from 'uvu'
