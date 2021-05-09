@@ -1,0 +1,29 @@
+{
+  "name": "specificity",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "module": "index.js",
+  "engines": {
+    "node": ">=14"
+  },
+  "scripts": {
+    "test": "uvu"
+  },
+  "keywords": [
+    "specificity",
+    "css",
+    "selector",
+    "calculator",
+    "compare"
+  ],
+  "author": "Bart Veneman <bart@projectwallace.com>",
+  "license": "MIT",
+  "dependencies": {
+    "css-tree": "^1.1.3"
+  },
+  "devDependencies": {
+    "uvu": "^0.5.1"
+  }
+}
