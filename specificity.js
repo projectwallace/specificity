@@ -7,7 +7,9 @@ import csstree from 'css-tree'
 
 function ensureSelectorList(node) {
   if (node.type === 'Raw') {
-    return csstree.parse(node.value, { context: 'selectorList' });
+    return csstree.parse(node.value, {
+      context: 'selectorList',
+    });
   }
 
   return node;
@@ -25,30 +27,50 @@ function maxSpecificity(a, b) {
 
 function maxSelectorListSpecificity(selectorList) {
   return ensureSelectorList(selectorList).children.reduce(
-    (result, node) => maxSpecificity(specificity(node), result),
+    (result, node) => maxSpecificity(specificity(node).specificityArray, result),
     [0, 0, 0]
   );
 }
 
-// §16. Calculating a selector’s specificity
-// https://www.w3.org/TR/selectors-4/#specificity-rules
-function specificity(simpleSelector) {
+/**
+ * §16. Calculating a selector’s specificity
+ * @see https://www.w3.org/TR/selectors-4/#specificity-rules
+ * @param {string} simpleSelector
+ * @param {Object} stringifyNode
+ *
+ * @typedef {Object} Part
+ * @property {string} selector
+ * @property {Specificity} specificity - e.g. [0,1,0]
+ *
+ * @typedef {Object} SpecificityObject
+ * @property {Specificity} specificityArray - e.g. [0,1,0]
+ * @property {String} specificity - e.g. 0,1,0
+ * @property {String} selector - the input
+ * @property {Array<Part>} parts - array with details about each part of the selector that counts towards the specificity
+ *
+ * @returns {SpecificityObject}
+ */
+function specificity(simpleSelector, stringifyNode) {
   var A = 0;
   var B = 0;
   var C = 0;
+  var parts = []
 
   // A selector’s specificity is calculated for a given element as follows:
   simpleSelector.children.each(function walk(node) {
+    const stringified = stringifyNode ? stringifyNode(node) : null
     switch (node.type) {
       // count the number of ID selectors in the selector (= A)
       case 'IdSelector':
         A++;
+        parts.push({ specificity: [1, 0, 0], selector: stringified })
         break;
 
       // count the number of class selectors, attributes selectors, ...
       case 'ClassSelector':
       case 'AttributeSelector':
         B++;
+        parts.push({ specificity: [0, 1, 0], selector: stringified })
         break;
 
       // ... and pseudo-classes in the selector (= B)
@@ -72,6 +94,8 @@ function specificity(simpleSelector) {
             B += b;
             C += c;
 
+            parts.push({ specificity: [a, b, c], selector: stringified })
+
             break;
           }
 
@@ -88,8 +112,10 @@ function specificity(simpleSelector) {
               A += a;
               B += b + 1;
               C += c;
+              parts.push({ specificity: [a, b + 1, c], selector: stringified })
             } else {
               B++;
+              parts.push({ specificity: [0, 1, 0], selector: stringified })
             }
 
             break;
@@ -97,6 +123,7 @@ function specificity(simpleSelector) {
 
           // The specificity of a :where() pseudo-class is replaced by zero.
           case 'where':
+            parts.push({ specificity: [0, 0, 0], selector: stringified })
             break;
 
           // The four Level 2 pseudo-elements (::before, ::after, ::first-line, and ::first-letter) may,
@@ -108,9 +135,11 @@ function specificity(simpleSelector) {
           case 'first-line':
           case 'first-letter':
             C++;
+            parts.push({ specificity: [0, 0, 1], selector: stringified })
             break;
 
           default:
+            parts.push({ specificity: [0, 1, 0], selector: stringified })
             B++;
         }
         break;
@@ -119,18 +148,26 @@ function specificity(simpleSelector) {
       case 'TypeSelector':
         // ignore the universal selector
         if (!node.name.endsWith('*')) {
+          parts.push({ specificity: [0, 0, 1], selector: stringified })
           C++;
+        } else {
+          parts.push({ specificity: [0, 0, 0], selector: stringified })
         }
         break;
 
       // ... and pseudo-elements in the selector (= C)
       case 'PseudoElementSelector':
         C++;
+        parts.push({ specificity: [0, 0, 1], selector: stringified })
         break;
     }
   });
 
-  return [A, B, C];
+  return {
+    specificityArray: [A, B, C],
+    specificity: [A, B, C].join(','),
+    parts,
+  };
 };
 
 export {
