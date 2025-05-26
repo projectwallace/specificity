@@ -83,7 +83,7 @@ describe('CALCULATE', () => {
         it('::slotted', () => {
             deepEqual(Specificity.calculate('::slotted')[0].toObject(), { a: 0, b: 0, c: 1 });
         });
-        it.skip('::slotted()', () => {
+        it('::slotted() & do not crash', () => {
             deepEqual(Specificity.calculate('::slotted()')[0].toObject(), { a: 0, b: 0, c: 1 });
         });
         it('::slotted(div#foo)', () => {
@@ -104,6 +104,9 @@ describe('CALCULATE', () => {
         // Default Specificity is 0,0,1...
         it('::view-transition', () => {
             deepEqual(Specificity.calculate('::view-transition')[0].toObject(), { a: 0, b: 0, c: 1 });
+        });
+        it('::view-transition-old() & do not crash', () => {
+            deepEqual(Specificity.calculate('::view-transition-old()')[0].toObject(), { a: 0, b: 0, c: 1 });
         });
         it('::view-transition-group(test)', () => {
             deepEqual(Specificity.calculate('::view-transition-group(test)')[0].toObject(), { a: 0, b: 0, c: 1 });
@@ -171,6 +174,9 @@ describe('CALCULATE', () => {
         it('p:nth-child = (0,1,1) & do not crash', () => {
             deepEqual(Specificity.calculate('p:nth-child')[0].toObject(), { a: 0, b: 1, c: 1 });
         });
+        it('p:nth-child() = (0,1,1) & do not crash', () => {
+            deepEqual(Specificity.calculate('p:nth-child()')[0].toObject(), { a: 0, b: 1, c: 1 });
+        });
     });
 
     describe('CSS :is(), :matches(), :-moz-any = Specificity of the most specific complex selector in its selector list argument', () => {
@@ -182,6 +188,9 @@ describe('CALCULATE', () => {
         });
         it(':-moz-any(#foo, .bar, baz) = (1,0,0)', () => {
             deepEqual(Specificity.calculate(':-moz-any(#foo, .bar, baz)')[0].toObject(), { a: 1, b: 0, c: 0 });
+        });
+        it(':has() & do not crash', () => {
+            deepEqual(Specificity.calculate(':has()')[0].toObject(), { a: 0, b: 0, c: 0 });
         });
     });
 
@@ -207,6 +216,19 @@ describe('CALCULATE', () => {
         it(':where = (0,0,0)', () => {
             deepEqual(Specificity.calculate(':where')[0].toObject(), { a: 0, b: 0, c: 0 });
         });
+
+        it(':is() = (0,0,0)', () => {
+            deepEqual(Specificity.calculate(':is()')[0].toObject(), { a: 0, b: 0, c: 0 });
+        });
+        it(':matches() = (0,0,0)', () => {
+            deepEqual(Specificity.calculate(':matches()')[0].toObject(), { a: 0, b: 0, c: 0 });
+        });
+        it(':any() = (0,0,0)', () => {
+            deepEqual(Specificity.calculate(':any()')[0].toObject(), { a: 0, b: 0, c: 0 });
+        });
+        it(':where() = (0,0,0)', () => {
+            deepEqual(Specificity.calculate(':where()')[0].toObject(), { a: 0, b: 0, c: 0 });
+        });
     });
 
     describe('CSS :has() = Specificity of the most specific complex selector in its selector list argument', () => {
@@ -231,7 +253,7 @@ describe('CALCULATE', () => {
         it(':host = (0,1,0)', () => {
             deepEqual(Specificity.calculate(':host')[0].toObject(), { a: 0, b: 1, c: 0 });
         });
-        it.skip(':host() = (0,1,0)', () => {
+        it(':host() = (0,1,0) & do not crash', () => {
             deepEqual(Specificity.calculate(':host()')[0].toObject(), { a: 0, b: 1, c: 0 });
         });
         it(':host(#foo.bar) = (1,2,0)', () => {
@@ -240,7 +262,7 @@ describe('CALCULATE', () => {
         it(':host(#foo.bar invalid) = (1,2,0)', () => {
             deepEqual(Specificity.calculate(':host(#foo.bar invalid)')[0].toObject(), { a: 1, b: 2, c: 0 });
         });
-        it.skip(':host-context() = (0,1,0)', () => {
+        it(':host-context() = (0,1,0) & do not crash', () => {
             deepEqual(Specificity.calculate(':host-context()')[0].toObject(), { a: 0, b: 1, c: 0 });
         });
         it(':host-context(#foo.bar) = (1,2,0)', () => {
