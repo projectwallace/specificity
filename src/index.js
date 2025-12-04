@@ -1,5 +1,3 @@
-import generate from 'css-tree/generator';
-
 import { calculate, calculateForAST } from './core/index.js';
 import { compare, equals, greaterThan, lessThan } from './util/compare.js';
 import { min, max } from './util/filter.js';
@@ -47,11 +45,9 @@ class Specificity {
             return this.selector;
         }
 
-        // this.selector is a Selector as parsed by CSSTree
-        if (this.selector instanceof Object) {
-            if (this.selector.type === 'Selector') {
-                return generate(this.selector);
-            }
+        // this.selector is from @projectwallace/css-parser
+        if (this.selector instanceof Object && typeof this.selector.type === 'number' && this.selector.text) {
+            return this.selector.text;
         }
 
         // this.selector is something else …
