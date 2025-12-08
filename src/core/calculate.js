@@ -87,28 +87,16 @@ const calculateForAST = (selectorAST) => {
                         b += 1;
 
                         if (current.has_children) {
-                            // Look for NODE_SELECTOR_NTH_OF which contains the "of" selector list
-                            let nthChild = current.first_child;
-                            while (nthChild) {
-                                if (nthChild.type === NODE_SELECTOR_NTH_OF) {
-                                    // Now look for NODE_SELECTOR_LIST as a child of this
-                                    let nthOfChild = nthChild.first_child;
-                                    while (nthOfChild) {
-                                        if (nthOfChild.type === NODE_SELECTOR_LIST) {
-                                            // Calculate Specificity from SelectorList
-                                            const max2 = max(...calculate(nthOfChild));
+                            // Get NODE_SELECTOR_NTH_OF which contains the "of" selector list
+                            const nthOf = current.first_child;
+                            if (nthOf && nthOf.type === NODE_SELECTOR_NTH_OF && nthOf.selector) {
+                                // Use the convenience property to access the selector list directly
+                                const max2 = max(...calculate(nthOf.selector));
 
-                                            // Adjust orig specificity
-                                            a += max2.a;
-                                            b += max2.b;
-                                            c += max2.c;
-                                            break;
-                                        }
-                                        nthOfChild = nthOfChild.next_sibling;
-                                    }
-                                    break;
-                                }
-                                nthChild = nthChild.next_sibling;
+                                // Adjust orig specificity
+                                a += max2.a;
+                                b += max2.b;
+                                c += max2.c;
                             }
                         }
                         break;
