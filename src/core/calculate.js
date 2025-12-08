@@ -128,21 +128,14 @@ const calculateForAST = (selectorAST) => {
                                     }
 
                                     if (compoundParts.length > 0) {
-                                        // Create a synthetic selector list and calculate its specificity
-                                        const selectorText = compoundParts.map((n) => n.text).join('');
-                                        try {
-                                            const childSpecificities = calculate(selectorText);
-                                            if (childSpecificities.length > 0) {
-                                                const childSpecificity = childSpecificities[0];
+                                        // Create a synthetic AST with the compound parts
+                                        const syntheticAST = createCompoundSelectorAST(compoundParts);
+                                        const childSpecificity = calculateForAST(syntheticAST);
 
-                                                // Adjust orig specificity
-                                                a += childSpecificity.a;
-                                                b += childSpecificity.b;
-                                                c += childSpecificity.c;
-                                            }
-                                        } catch {
-                                            // If parsing fails, just skip
-                                        }
+                                        // Adjust orig specificity
+                                        a += childSpecificity.a;
+                                        b += childSpecificity.b;
+                                        c += childSpecificity.c;
                                     }
                                 }
                             }
@@ -191,21 +184,14 @@ const calculateForAST = (selectorAST) => {
                                     }
 
                                     if (compoundParts.length > 0) {
-                                        // Create a synthetic selector list and calculate its specificity
-                                        const selectorText = compoundParts.map((n) => n.text).join('');
-                                        try {
-                                            const childSpecificities = calculate(selectorText);
-                                            if (childSpecificities.length > 0) {
-                                                const childSpecificity = childSpecificities[0];
+                                        // Create a synthetic AST with the compound parts
+                                        const syntheticAST = createCompoundSelectorAST(compoundParts);
+                                        const childSpecificity = calculateForAST(syntheticAST);
 
-                                                // Adjust orig specificity
-                                                a += childSpecificity.a;
-                                                b += childSpecificity.b;
-                                                c += childSpecificity.c;
-                                            }
-                                        } catch {
-                                            // If parsing fails, just skip
-                                        }
+                                        // Adjust orig specificity
+                                        a += childSpecificity.a;
+                                        b += childSpecificity.b;
+                                        c += childSpecificity.c;
                                     }
                                 }
                             }
@@ -319,6 +305,39 @@ function createSelectorListWrapper(selectorNode) {
         next_sibling: null,
         has_children: true,
         text: selectorNode.text || '',
+    };
+}
+
+// Helper to create a synthetic AST from compound selector parts
+function createCompoundSelectorAST(compoundParts) {
+    if (compoundParts.length === 0) {
+        throw new Error('Cannot create compound selector AST from empty parts array');
+    }
+
+    // Clone the parts using built-in clone() method (available in css-parser@0.6.7+)
+    const clonedParts = compoundParts.map(part => part.clone());
+
+    // Link them together with next_sibling
+    for (let i = 0; i < clonedParts.length - 1; i++) {
+        clonedParts[i].next_sibling = clonedParts[i + 1];
+    }
+
+    // Create NODE_SELECTOR containing the parts
+    const selectorNode = {
+        type: NODE_SELECTOR,
+        first_child: clonedParts[0],
+        next_sibling: null,
+        has_children: true,
+        text: compoundParts.map((n) => n.text).join(''),
+    };
+
+    // Wrap in NODE_SELECTOR_LIST
+    return {
+        type: NODE_SELECTOR_LIST,
+        first_child: selectorNode,
+        next_sibling: null,
+        has_children: true,
+        text: selectorNode.text,
     };
 }
 

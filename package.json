@@ -87,6 +87,6 @@
     "semver": "^7.7.1"
   },
   "dependencies": {
-    "@projectwallace/css-parser": "^0.6.5"
+    "@projectwallace/css-parser": "^0.6.7"
   }
 }
