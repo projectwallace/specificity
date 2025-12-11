@@ -79,18 +79,16 @@ const calculateForAST = (selectorAST) => {
                     case 'nth-last-child':
                         b += 1;
 
-                        if (current.has_children) {
-                            // Get NODE_SELECTOR_NTH_OF which contains the "of" selector list
-                            const nthOf = current.first_child;
-                            if (nthOf?.type_name === 'nth-of-selector' && nthOf.selector) {
-                                // Use the convenience property to access the selector list directly
-                                const max2 = max(...calculate(nthOf.selector));
+                        // Get NODE_SELECTOR_NTH_OF which contains the "of" selector list
+                        const nthOf = current.first_child;
+                        if (nthOf?.type_name === 'nth-of-selector' && nthOf.selector) {
+                            // Use the convenience property to access the selector list directly
+                            const max2 = max(...calculate(nthOf.selector));
 
-                                // Adjust orig specificity
-                                a += max2.a;
-                                b += max2.b;
-                                c += max2.c;
-                            }
+                            // Adjust orig specificity
+                            a += max2.a;
+                            b += max2.b;
+                            c += max2.c;
                         }
                         break;
 
@@ -117,8 +115,6 @@ const calculateForAST = (selectorAST) => {
                                 const childSpecificity = calculateForAST({
                                     type_name: 'selector',
                                     first_child: compoundParts.at(0),
-                                    has_children: true,
-                                    next_sibling: null,
                                 });
                                 a += childSpecificity.a;
                                 b += childSpecificity.b;
@@ -165,8 +161,6 @@ const calculateForAST = (selectorAST) => {
                                 const childSpecificity = calculateForAST({
                                     type_name: 'selector',
                                     first_child: compoundParts.at(0),
-                                    has_children: true,
-                                    next_sibling: null,
                                 });
                                 a += childSpecificity.a;
                                 b += childSpecificity.b;
