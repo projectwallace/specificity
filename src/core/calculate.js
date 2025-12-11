@@ -61,7 +61,7 @@ const calculateForAST = (selectorAST) => {
                         if (current.has_children) {
                             // The first child should be a NODE_SELECTOR_LIST
                             const childSelectorList = current.first_child;
-                            if (childSelectorList && childSelectorList.type_name === 'selectorlist') {
+                            if (childSelectorList?.type_name === 'selectorlist') {
                                 // Calculate Specificity for all selectors in the list and get max
                                 const max1 = max(...calculate(childSelectorList));
 
@@ -143,7 +143,7 @@ const calculateForAST = (selectorAST) => {
                 break;
 
             case 'pseudoelement-selector':
-                switch (current.name) {
+                switch (current.name.toLowerCase()) {
                     // "The specificity of ::slotted() is that of a pseudo-element, plus the specificity of its argument."
                     case 'slotted':
                         c += 1;
