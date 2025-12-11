@@ -1,4 +1,4 @@
-import { parse_selector } from '@projectwallace/css-parser';
+import { parse_selector } from '@projectwallace/css-parser/parse-selector';
 import Specificity from '../index.js';
 import { max } from './../util/index.js';
 
