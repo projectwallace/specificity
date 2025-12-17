@@ -7,13 +7,13 @@ const calculateForAST = (selectorAST) => {
     let selectorNode;
 
     // Accept either NODE_SELECTOR_LIST or NODE_SELECTOR directly
-    if (selectorAST.type_name === 'selectorlist') {
+    if (selectorAST.type_name === 'SelectorList') {
         // Unwrap NODE_SELECTOR from NODE_SELECTOR_LIST
         selectorNode = selectorAST.first_child;
-        if (!selectorNode || selectorNode.type_name !== 'selector') {
+        if (!selectorNode || selectorNode.type_name !== 'Selector') {
             throw new TypeError(`Expected selector as first child of SelectorList`);
         }
-    } else if (selectorAST.type_name === 'selector') {
+    } else if (selectorAST.type_name === 'Selector') {
         // Already a NODE_SELECTOR, use directly
         selectorNode = selectorAST;
     } else {
@@ -29,16 +29,16 @@ const calculateForAST = (selectorAST) => {
     let current = selectorNode.first_child;
     while (current) {
         switch (current.type_name) {
-            case 'id-selector':
+            case 'IdSelector':
                 a += 1;
                 break;
 
-            case 'attribute-selector':
-            case 'class-selector':
+            case 'AttributeSelector':
+            case 'ClassSelector':
                 b += 1;
                 break;
 
-            case 'pseudoclass-selector':
+            case 'PseudoClassSelector':
                 switch (current.name.toLowerCase()) {
                     // "The specificity of a :where() pseudo-class is replaced by zero."
                     case 'where':
@@ -61,7 +61,7 @@ const calculateForAST = (selectorAST) => {
                         if (current.has_children) {
                             // The first child should be a NODE_SELECTOR_LIST
                             const childSelectorList = current.first_child;
-                            if (childSelectorList?.type_name === 'selectorlist') {
+                            if (childSelectorList?.type_name === 'SelectorList') {
                                 // Calculate Specificity for all selectors in the list and get max
                                 const max1 = max(...calculate(childSelectorList));
 
@@ -81,7 +81,7 @@ const calculateForAST = (selectorAST) => {
 
                         // Get NODE_SELECTOR_NTH_OF which contains the "of" selector list
                         const nthOf = current.first_child;
-                        if (nthOf?.type_name === 'nth-of-selector' && nthOf.selector) {
+                        if (nthOf?.type_name === 'NthOf' && nthOf.selector) {
                             // Use the convenience property to access the selector list directly
                             const max2 = max(...calculate(nthOf.selector));
 
@@ -99,11 +99,11 @@ const calculateForAST = (selectorAST) => {
                         b += 1;
 
                         const childSelector = current.first_child?.first_child;
-                        if (childSelector?.type_name === 'selector') {
+                        if (childSelector?.type_name === 'Selector') {
                             // Collect and link parts before combinator
                             const compoundParts = [];
                             for (const part of childSelector) {
-                                if (part.type_name === 'selector-combinator') break;
+                                if (part.type_name === 'Combinator') break;
                                 const clone = part.clone();
                                 if (compoundParts.length > 0) {
                                     compoundParts.at(-1).next_sibling = clone;
@@ -113,7 +113,7 @@ const calculateForAST = (selectorAST) => {
 
                             if (compoundParts.length > 0) {
                                 const childSpecificity = calculateForAST({
-                                    type_name: 'selector',
+                                    type_name: 'Selector',
                                     first_child: compoundParts.at(0),
                                 });
                                 a += childSpecificity.a;
@@ -138,18 +138,18 @@ const calculateForAST = (selectorAST) => {
                 }
                 break;
 
-            case 'pseudoelement-selector':
+            case 'PseudoElementSelector':
                 switch (current.name.toLowerCase()) {
                     // "The specificity of ::slotted() is that of a pseudo-element, plus the specificity of its argument."
                     case 'slotted':
                         c += 1;
 
                         const childSelector = current.first_child?.first_child;
-                        if (childSelector?.type_name === 'selector') {
+                        if (childSelector?.type_name === 'Selector') {
                             // Collect and link parts before combinator
                             const compoundParts = [];
                             for (const part of childSelector) {
-                                if (part.type_name === 'selector-combinator') break;
+                                if (part.type_name === 'Combinator') break;
                                 const clone = part.clone();
                                 if (compoundParts.length > 0) {
                                     compoundParts.at(-1).next_sibling = clone;
@@ -159,7 +159,7 @@ const calculateForAST = (selectorAST) => {
 
                             if (compoundParts.length > 0) {
                                 const childSpecificity = calculateForAST({
-                                    type_name: 'selector',
+                                    type_name: 'Selector',
                                     first_child: compoundParts.at(0),
                                 });
                                 a += childSpecificity.a;
@@ -188,7 +188,7 @@ const calculateForAST = (selectorAST) => {
                 }
                 break;
 
-            case 'type-selector':
+            case 'TypeSelector':
                 // Omit namespace
                 let typeSelector = current.name;
                 if (typeSelector.includes('|')) {
@@ -226,7 +226,7 @@ const convertToAST = (source) => {
     // The passed in argument was an Object.
     // ~> Let's verify if it's a AST of the type NODE_SELECTOR_LIST
     if (source instanceof Object) {
-        if (source.type_name && source.type_name === 'selectorlist') {
+        if (source.type_name && source.type_name === 'SelectorList') {
             return source;
         }
 
