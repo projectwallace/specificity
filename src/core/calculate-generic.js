@@ -12,28 +12,12 @@
  */
 
 // Pseudo-classes whose specificity = max specificity of their selector list argument
-const FORGIVING_PSEUDO_CLASSES = new Set([
-	'-moz-any',
-	'is',
-	'matches',
-	'not',
-	'has',
-]);
+const FORGIVING_PSEUDO_CLASSES = new Set(['-moz-any', 'is', 'matches', 'not', 'has']);
 
 // Legacy pseudo-element syntax written as pseudo-class (:before instead of ::before)
-const LEGACY_PSEUDO_ELEMENTS = new Set([
-	'after',
-	'before',
-	'first-letter',
-	'first-line',
-]);
+const LEGACY_PSEUDO_ELEMENTS = new Set(['after', 'before', 'first-letter', 'first-line']);
 
-const VIEW_TRANSITION_PSEUDO_ELEMENTS = new Set([
-	'view-transition-group',
-	'view-transition-image-pair',
-	'view-transition-old',
-	'view-transition-new',
-]);
+const VIEW_TRANSITION_PSEUDO_ELEMENTS = new Set(['view-transition-group', 'view-transition-image-pair', 'view-transition-old', 'view-transition-new']);
 
 /**
  * Calculate specificity for a single Selector node using the provided walker.
@@ -43,138 +27,138 @@ const VIEW_TRANSITION_PSEUDO_ELEMENTS = new Set([
  * @returns {{ a: number, b: number, c: number }}
  */
 const calculateForSelector = (selectorNode, walker) => {
-	let a = 0;
-	let b = 0;
-	let c = 0;
+    let a = 0;
+    let b = 0;
+    let c = 0;
 
-	for (const child of walker.getChildren(selectorNode)) {
-		const type = walker.getType(child);
+    for (const child of walker.getChildren(selectorNode)) {
+        const type = walker.getType(child);
 
-		switch (type) {
-			case 'id':
-				a += 1;
-				break;
+        switch (type) {
+            case 'id':
+                a += 1;
+                break;
 
-			case 'class':
-			case 'attribute':
-				b += 1;
-				break;
+            case 'class':
+            case 'attribute':
+                b += 1;
+                break;
 
-			case 'pseudo-class': {
-				const name = walker.getName(child).toLowerCase();
+            case 'pseudo-class': {
+                const name = walker.getName(child).toLowerCase();
 
-				if (name === 'where') {
-					// :where() specificity is zero
-					break;
-				}
+                if (name === 'where') {
+                    // :where() specificity is zero
+                    break;
+                }
 
-				if (name === '-webkit-any' || name === 'any') {
-					const selectorList = walker.getSelectorListArgument(child);
-					if (selectorList) {
-						b += 1;
-					}
-					break;
-				}
+                if (name === '-webkit-any' || name === 'any') {
+                    const selectorList = walker.getSelectorListArgument(child);
+                    if (selectorList) {
+                        b += 1;
+                    }
+                    break;
+                }
 
-				if (FORGIVING_PSEUDO_CLASSES.has(name)) {
-					// Specificity = max specificity of selector list argument
-					const selectorList = walker.getSelectorListArgument(child);
-					if (selectorList) {
-						const maxSpec = maxSpecificity(selectorList, walker);
-						a += maxSpec.a;
-						b += maxSpec.b;
-						c += maxSpec.c;
-					}
-					break;
-				}
+                if (FORGIVING_PSEUDO_CLASSES.has(name)) {
+                    // Specificity = max specificity of selector list argument
+                    const selectorList = walker.getSelectorListArgument(child);
+                    if (selectorList) {
+                        const maxSpec = maxSpecificity(selectorList, walker);
+                        a += maxSpec.a;
+                        b += maxSpec.b;
+                        c += maxSpec.c;
+                    }
+                    break;
+                }
 
-				if (name === 'nth-child' || name === 'nth-last-child') {
-					// Counts as a pseudo-class
-					b += 1;
+                if (name === 'nth-child' || name === 'nth-last-child') {
+                    // Counts as a pseudo-class
+                    b += 1;
 
-					// Plus the max specificity of the `of` selector list, if present
-					const selectorList = walker.getSelectorListArgument(child);
-					if (selectorList) {
-						const maxSpec = maxSpecificity(selectorList, walker);
-						a += maxSpec.a;
-						b += maxSpec.b;
-						c += maxSpec.c;
-					}
-					break;
-				}
+                    // Plus the max specificity of the `of` selector list, if present
+                    const selectorList = walker.getSelectorListArgument(child);
+                    if (selectorList) {
+                        const maxSpec = maxSpecificity(selectorList, walker);
+                        a += maxSpec.a;
+                        b += maxSpec.b;
+                        c += maxSpec.c;
+                    }
+                    break;
+                }
 
-				if (name === 'host' || name === 'host-context') {
-					// Counts as a pseudo-class
-					b += 1;
+                if (name === 'host' || name === 'host-context') {
+                    // Counts as a pseudo-class
+                    b += 1;
 
-					// Plus the specificity of its compound selector argument
-					const selectorList = walker.getSelectorListArgument(child);
-					if (selectorList) {
-						const maxSpec = maxSpecificity(selectorList, walker);
-						a += maxSpec.a;
-						b += maxSpec.b;
-						c += maxSpec.c;
-					}
-					break;
-				}
+                    // Plus the specificity of its compound selector argument
+                    const selectorList = walker.getSelectorListArgument(child);
+                    if (selectorList) {
+                        const maxSpec = maxSpecificity(selectorList, walker);
+                        a += maxSpec.a;
+                        b += maxSpec.b;
+                        c += maxSpec.c;
+                    }
+                    break;
+                }
 
-				if (LEGACY_PSEUDO_ELEMENTS.has(name)) {
-					// :before, :after, etc. written with single colon
-					c += 1;
-					break;
-				}
+                if (LEGACY_PSEUDO_ELEMENTS.has(name)) {
+                    // :before, :after, etc. written with single colon
+                    c += 1;
+                    break;
+                }
 
-				// Default pseudo-class
-				b += 1;
-				break;
-			}
+                // Default pseudo-class
+                b += 1;
+                break;
+            }
 
-			case 'pseudo-element': {
-				const name = walker.getName(child).toLowerCase();
+            case 'pseudo-element': {
+                const name = walker.getName(child).toLowerCase();
 
-				if (name === 'slotted') {
-					c += 1;
+                if (name === 'slotted') {
+                    c += 1;
 
-					// Plus the specificity of its compound selector argument
-					const selectorList = walker.getSelectorListArgument(child);
-					if (selectorList) {
-						const maxSpec = maxSpecificity(selectorList, walker);
-						a += maxSpec.a;
-						b += maxSpec.b;
-						c += maxSpec.c;
-					}
-					break;
-				}
+                    // Plus the specificity of its compound selector argument
+                    const selectorList = walker.getSelectorListArgument(child);
+                    if (selectorList) {
+                        const maxSpec = maxSpecificity(selectorList, walker);
+                        a += maxSpec.a;
+                        b += maxSpec.b;
+                        c += maxSpec.c;
+                    }
+                    break;
+                }
 
-				if (VIEW_TRANSITION_PSEUDO_ELEMENTS.has(name)) {
-					// Zero specificity if argument is *
-					const vtArg = walker.getViewTransitionArgument?.(child);
-					if (vtArg === '*') {
-						break;
-					}
-					c += 1;
-					break;
-				}
+                if (VIEW_TRANSITION_PSEUDO_ELEMENTS.has(name)) {
+                    // Zero specificity if argument is *
+                    const vtArg = walker.getViewTransitionArgument?.(child);
+                    if (vtArg === '*') {
+                        break;
+                    }
+                    c += 1;
+                    break;
+                }
 
-				// Default pseudo-element
-				c += 1;
-				break;
-			}
+                // Default pseudo-element
+                c += 1;
+                break;
+            }
 
-			case 'type':
-				c += 1;
-				break;
+            case 'type':
+                c += 1;
+                break;
 
-			case 'universal':
-			case 'combinator':
-			case 'other':
-			default:
-				// No specificity contribution
-				break;
-		}
-	}
+            case 'universal':
+            case 'combinator':
+            case 'other':
+            default:
+                // No specificity contribution
+                break;
+        }
+    }
 
-	return { a, b, c };
+    return { a, b, c };
 };
 
 /**
@@ -185,25 +169,21 @@ const calculateForSelector = (selectorNode, walker) => {
  * @returns {{ a: number, b: number, c: number }}
  */
 const maxSpecificity = (selectors, walker) => {
-	let maxA = 0;
-	let maxB = 0;
-	let maxC = 0;
+    let maxA = 0;
+    let maxB = 0;
+    let maxC = 0;
 
-	for (const selector of selectors) {
-		const spec = calculateForSelector(selector, walker);
+    for (const selector of selectors) {
+        const spec = calculateForSelector(selector, walker);
 
-		if (
-			spec.a > maxA ||
-			(spec.a === maxA && spec.b > maxB) ||
-			(spec.a === maxA && spec.b === maxB && spec.c > maxC)
-		) {
-			maxA = spec.a;
-			maxB = spec.b;
-			maxC = spec.c;
-		}
-	}
+        if (spec.a > maxA || (spec.a === maxA && spec.b > maxB) || (spec.a === maxA && spec.b === maxB && spec.c > maxC)) {
+            maxA = spec.a;
+            maxB = spec.b;
+            maxC = spec.c;
+        }
+    }
 
-	return { a: maxA, b: maxB, c: maxC };
+    return { a: maxA, b: maxB, c: maxC };
 };
 
 export { calculateForSelector, maxSpecificity };
