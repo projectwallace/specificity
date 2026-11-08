@@ -1,20 +1,53 @@
 import parse from 'css-tree/selector-parser';
 import Specificity from '../index.js';
-import { max } from './../util/index.js';
+import { compare } from './../util/compare.js';
 
-/** @param {import('css-tree').Selector} selectorAST */
-const calculateForAST = (selectorAST) => {
-    // Quit while you're ahead
-    if (!selectorAST || selectorAST.type !== 'Selector') {
-        throw new TypeError(`Passed in source is not a Selector AST`);
+/**
+ * Specificity value of the most specific Selector in a (nested) SelectorList.
+ * Avoids building Specificity instances, intermediate arrays and sorting.
+ */
+const calculateMaxValue = (node) => {
+    if (node.type === 'Selector') {
+        return calculateValue(node);
     }
 
+    // Anything else (e.g. Raw) goes through the regular conversion
+    const list = node.type === 'SelectorList' ? node : convertToAST(node);
+    if (list.type === 'Selector') {
+        return calculateValue(list);
+    }
+
+    let best = { a: 0, b: 0, c: 0 };
+    let isFirst = true;
+    for (const selector of list.children) {
+        const value = calculateValue(selector);
+        if (isFirst || compare(value, best) > 0) {
+            best = value;
+            isFirst = false;
+        }
+    }
+    return best;
+};
+
+/**
+ * Workaround to a css-tree bug in which it allows complex selectors instead of only compound selectors.
+ * We work around it by ignoring any Combinator and successive entries.
+ */
+const calculateCompoundValue = (selector) => calculateChildren(selector.children, true);
+
+const calculateValue = (selectorAST) => calculateChildren(selectorAST.children, false);
+
+const calculateChildren = (children, stopAtCombinator) => {
     // https://www.w3.org/TR/selectors-4/#specificity-rules
     let a = 0; /* ID Selectors */
     let b = 0; /* Class selectors, Attributes selectors, and Pseudo-classes */
     let c = 0; /* Type selectors and Pseudo-elements */
 
-    selectorAST.children.forEach((child) => {
+    for (const child of children) {
+        if (stopAtCombinator && child.type === 'Combinator') {
+            break;
+        }
+
         switch (child.type) {
             case 'IdSelector':
                 a += 1;
@@ -25,7 +58,9 @@ const calculateForAST = (selectorAST) => {
                 b += 1;
                 break;
 
-            case 'PseudoClassSelector':
+            case 'PseudoClassSelector': {
+                const first = child.children?.first;
+
                 switch (child.name.toLowerCase()) {
                     // “The specificity of a :where() pseudo-class is replaced by zero.”
                     case 'where':
@@ -34,7 +69,7 @@ const calculateForAST = (selectorAST) => {
 
                     case '-webkit-any':
                     case 'any':
-                        if (child.children?.first) {
+                        if (first) {
                             b += 1;
                         }
                         break;
@@ -45,9 +80,9 @@ const calculateForAST = (selectorAST) => {
                     case 'matches':
                     case 'not':
                     case 'has':
-                        if (child.children?.first) {
+                        if (first) {
                             // Calculate Specificity from nested SelectorList
-                            const max1 = max(...calculate(child.children.first));
+                            const max1 = calculateMaxValue(first);
 
                             // Adjust orig specificity
                             a += max1.a;
@@ -62,9 +97,9 @@ const calculateForAST = (selectorAST) => {
                     case 'nth-last-child':
                         b += 1;
 
-                        if (child.children?.first?.selector) {
+                        if (first?.selector) {
                             // Calculate Specificity from SelectorList
-                            const max2 = max(...calculate(child.children.first.selector));
+                            const max2 = calculateMaxValue(first.selector);
 
                             // Adjust orig specificity
                             a += max2.a;
@@ -79,22 +114,8 @@ const calculateForAST = (selectorAST) => {
                     case 'host':
                         b += 1;
 
-                        if (child.children?.first?.children) {
-                            // Workaround to a css-tree bug in which it allows complex selectors instead of only compound selectors
-                            // We work around it by filtering out any Combinator and successive Selectors
-                            const childAST = { type: 'Selector', children: [] };
-                            let foundCombinator = false;
-                            child.children.first.children.forEach((entry) => {
-                                if (foundCombinator) return false;
-                                if (entry.type === 'Combinator') {
-                                    foundCombinator = true;
-                                    return false;
-                                }
-                                childAST.children.push(entry);
-                            });
-
-                            // Calculate Specificity from Selector
-                            const childSpecificity = calculate(childAST)[0];
+                        if (first?.children) {
+                            const childSpecificity = calculateCompoundValue(first);
 
                             // Adjust orig specificity
                             a += childSpecificity.a;
@@ -117,29 +138,18 @@ const calculateForAST = (selectorAST) => {
                         break;
                 }
                 break;
+            }
 
-            case 'PseudoElementSelector':
+            case 'PseudoElementSelector': {
+                const first = child.children?.first;
+
                 switch (child.name) {
                     // “The specificity of ::slotted() is that of a pseudo-element, plus the specificity of its argument.”
                     case 'slotted':
                         c += 1;
 
-                        if (child.children?.first?.children) {
-                            // Workaround to a css-tree bug in which it allows complex selectors instead of only compound selectors
-                            // We work around it by filtering out any Combinator and successive Selectors
-                            const childAST = { type: 'Selector', children: [] };
-                            let foundCombinator = false;
-                            child.children.first.children.forEach((entry) => {
-                                if (foundCombinator) return false;
-                                if (entry.type === 'Combinator') {
-                                    foundCombinator = true;
-                                    return false;
-                                }
-                                childAST.children.push(entry);
-                            });
-
-                            // Calculate Specificity from Selector
-                            const childSpecificity = calculate(childAST)[0];
+                        if (first?.children) {
+                            const childSpecificity = calculateCompoundValue(first);
 
                             // Adjust orig specificity
                             a += childSpecificity.a;
@@ -153,7 +163,7 @@ const calculateForAST = (selectorAST) => {
                     case 'view-transition-old':
                     case 'view-transition-new':
                         // The specificity of a view-transition selector with a * argument is zero.
-                        if (child.children?.first?.value === '*') {
+                        if (first?.value === '*') {
                             break;
                         }
                         // The specificity of a view-transition selector with an argument is the same
@@ -164,7 +174,7 @@ const calculateForAST = (selectorAST) => {
                     case 'highlight':
                         if (child.children?.size > 0) {
                             // The specificity of a ::highlight() selector with a * argument is zero.
-                            if (child.children.first?.value === '*') {
+                            if (first?.value === '*') {
                                 break;
                             }
                             // The specificity of a ::highlight() selector with a <custom-ident> argument
@@ -178,27 +188,38 @@ const calculateForAST = (selectorAST) => {
                         break;
                 }
                 break;
+            }
 
-            case 'TypeSelector':
+            case 'TypeSelector': {
                 // Omit namespace
-                let typeSelector = child.name;
-                if (typeSelector.includes('|')) {
-                    typeSelector = typeSelector.split('|')[1];
-                }
+                const name = child.name;
+                const nsIndex = name.indexOf('|');
+                const typeSelector = nsIndex === -1 ? name : name.slice(nsIndex + 1);
 
                 // “Ignore the universal selector”
                 if (typeSelector !== '*') {
                     c += 1;
                 }
                 break;
+            }
 
             default:
                 // NOOP
                 break;
         }
-    });
+    }
 
-    return new Specificity({ a, b, c }, selectorAST);
+    return { a, b, c };
+};
+
+/** @param {import('css-tree').Selector} selectorAST */
+const calculateForAST = (selectorAST) => {
+    // Quit while you're ahead
+    if (!selectorAST || selectorAST.type !== 'Selector') {
+        throw new TypeError(`Passed in source is not a Selector AST`);
+    }
+
+    return new Specificity(calculateValue(selectorAST), selectorAST);
 };
 
 const convertToAST = (source) => {
@@ -261,10 +282,9 @@ const calculate = (selector) => {
     // ~> Calculate Specificity for each contained Selector
     if (ast.type === 'SelectorList') {
         const specificities = [];
-        ast.children.forEach((childAST) => {
-            const specificity = calculateForAST(childAST);
-            specificities.push(specificity);
-        });
+        for (const childAST of ast.children) {
+            specificities.push(calculateForAST(childAST));
+        }
         return specificities;
     }
 };
