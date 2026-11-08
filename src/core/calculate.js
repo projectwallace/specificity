@@ -19,14 +19,13 @@ const calculateMaxValue = (node) => {
 
     let best = { a: 0, b: 0, c: 0 };
     let isFirst = true;
-    // Walk the List nodes directly: List's iterator is a (slow) generator
-    for (let node = list.children.head; node !== null; node = node.next) {
-        const value = calculateValue(node.data);
+    list.children.forEach((selector) => {
+        const value = calculateValue(selector);
         if (isFirst || compare(value, best) > 0) {
             best = value;
             isFirst = false;
         }
-    }
+    });
     return best;
 };
 
@@ -44,12 +43,14 @@ const calculateChildren = (children, stopAtCombinator) => {
     let b = 0; /* Class selectors, Attributes selectors, and Pseudo-classes */
     let c = 0; /* Type selectors and Pseudo-elements */
 
-    // Walk the List nodes directly: List's iterator is a (slow) generator
-    for (let node = children.head; node !== null; node = node.next) {
-        const child = node.data;
+    let done = false;
+
+    children.forEach((child) => {
+        if (done) return;
 
         if (stopAtCombinator && child.type === 'Combinator') {
-            break;
+            done = true;
+            return;
         }
 
         switch (child.type) {
@@ -211,7 +212,7 @@ const calculateChildren = (children, stopAtCombinator) => {
                 // NOOP
                 break;
         }
-    }
+    });
 
     return { a, b, c };
 };
@@ -286,9 +287,9 @@ const calculate = (selector) => {
     // ~> Calculate Specificity for each contained Selector
     if (ast.type === 'SelectorList') {
         const specificities = [];
-        for (let node = ast.children.head; node !== null; node = node.next) {
-            specificities.push(calculateForAST(node.data));
-        }
+        ast.children.forEach((childAST) => {
+            specificities.push(calculateForAST(childAST));
+        });
         return specificities;
     }
 };
