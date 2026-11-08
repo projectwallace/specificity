@@ -19,8 +19,9 @@ const calculateMaxValue = (node) => {
 
     let best = { a: 0, b: 0, c: 0 };
     let isFirst = true;
-    for (const selector of list.children) {
-        const value = calculateValue(selector);
+    // Walk the List nodes directly: List's iterator is a (slow) generator
+    for (let node = list.children.head; node !== null; node = node.next) {
+        const value = calculateValue(node.data);
         if (isFirst || compare(value, best) > 0) {
             best = value;
             isFirst = false;
@@ -43,7 +44,10 @@ const calculateChildren = (children, stopAtCombinator) => {
     let b = 0; /* Class selectors, Attributes selectors, and Pseudo-classes */
     let c = 0; /* Type selectors and Pseudo-elements */
 
-    for (const child of children) {
+    // Walk the List nodes directly: List's iterator is a (slow) generator
+    for (let node = children.head; node !== null; node = node.next) {
+        const child = node.data;
+
         if (stopAtCombinator && child.type === 'Combinator') {
             break;
         }
@@ -282,8 +286,8 @@ const calculate = (selector) => {
     // ~> Calculate Specificity for each contained Selector
     if (ast.type === 'SelectorList') {
         const specificities = [];
-        for (const childAST of ast.children) {
-            specificities.push(calculateForAST(childAST));
+        for (let node = ast.children.head; node !== null; node = node.next) {
+            specificities.push(calculateForAST(node.data));
         }
         return specificities;
     }
